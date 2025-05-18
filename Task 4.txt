@@ -1,0 +1,74 @@
+module fir_filter (
+    input clk,
+    input reset,
+    input signed [7:0] x_in,              // Input sample
+    output reg signed [15:0] y_out        // Filtered output
+);
+
+    // FIR coefficients (4-tap example): h = [1, 2, 3, 4]
+    parameter signed [7:0] h0 = 8'd1;
+    parameter signed [7:0] h1 = 8'd2;
+    parameter signed [7:0] h2 = 8'd3;
+    parameter signed [7:0] h3 = 8'd4;
+
+    // Shift register for input samples
+    reg signed [7:0] x[0:3];
+
+    integer i;
+
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            for (i = 0; i < 4; i = i + 1)
+                x[i] <= 0;
+            y_out <= 0;
+        end else begin
+            // Shift input samples
+            x[3] <= x[2];
+            x[2] <= x[1];
+            x[1] <= x[0];
+            x[0] <= x_in;
+
+            // Multiply-Accumulate operation
+            y_out <= h0 * x[0] + h1 * x[1] + h2 * x[2] + h3 * x[3];
+        end
+    end
+
+endmodule
+module tb_fir_filter;
+
+    reg clk;
+    reg reset;
+    reg signed [7:0] x_in;
+    wire signed [15:0] y_out;
+
+    // Instantiate the FIR filter
+    fir_filter uut (
+        .clk(clk),
+        .reset(reset),
+        .x_in(x_in),
+        .y_out(y_out)
+    );
+
+    // Clock generation
+    always #5 clk = ~clk;
+
+    initial begin
+        clk = 0;
+        reset = 1;
+        x_in = 0;
+        #10 reset = 0;
+
+        // Apply input samples
+        #10 x_in = 8'd1;
+        #10 x_in = 8'd2;
+        #10 x_in = 8'd3;
+        #10 x_in = 8'd4;
+        #10 x_in = 8'd5;
+        #10 x_in = 8'd0;
+        #10 x_in = -8'd2;
+        #10 x_in = -8'd3;
+
+        #50 $finish;
+    end
+
+endmodule
